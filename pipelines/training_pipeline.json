@@ -1,0 +1,84 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-preprocess": {
+        "executorLabel": "exec-preprocess",
+        "inputDefinitions": {
+          "parameters": {
+            "raw_file": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "prep_file": {
+              "artifactType": {
+                "schemaTitle": "system.Dataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-preprocess": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "preprocess"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.20' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef preprocess(\n    raw_file: str,\n    prep_file: Output[Dataset],\n) -> None:\n    \"\"\"\n    Preprocess raw file\n\n    Args:\n        raw_file: the file that gathered all the raw data\n        prep_file: the output file that contains basic preprocessing\n        steps\n\n    Return:\n        None\n    \"\"\"\n    import pandas as pd\n\n    df_input = pd.DataFrame({'points': [0, 1, 0, 0, 0, 1, 1, 1, 0, 0], 'country_city': ['peru,comas', 'peru,lince', 'peru,los olivos', 'peru,san juan de lurigancho', 'peru,comas', 'peru,lince', 'peru,los olivos', 'peru,san juan de lurigancho', 'peru,comas', 'peru,lince'], 'cap_1': [0.639, 0.109, 0.63, 0.026, 0.53, 0.889, 0.874, 0.196, 0.891, 0.915], 'cap_2': [0.466, 0.394, 0.12, 0.571, 0.225, 0.681, 0.459, 0.832, 0.019, 0.975], 'cap_3': [0.867, 0.965, 0.961, 0.249, 0.993, 0.218, 0.4, 0.916, 0.516, 0.855], 'cap_4': [0.983, 0.658, 0.351, 0.551, 0.451, 0.007, 0.6, 0.055, 0.73, 0.017], 'cap_5': [0.689, 0.333, 0.63, 0.772, 0.389, 0.885, 0.311, 0.03, 0.253, 0.164], 'cap_6': [0.673, 0.079, 0.987, 0.404, 0.357, 0.55, 0.981, 0.641, 0.042, 0.894]})\n    df_input[[\"country\", \"city\"]] = df_input[\"country_city\"].apply(lambda x: pd.Series(x.split(\",\")))\n    df_input.to_csv(prep_file.path, index=False)\n\n"
+            ],
+            "image": "index.docker.io/seyco/base_kbf_image"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "pipeline-xgboost-test"
+    },
+    "root": {
+      "dag": {
+        "tasks": {
+          "preprocess": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-preprocess"
+            },
+            "inputs": {
+              "parameters": {
+                "raw_file": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "people.csv"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "preprocess"
+            }
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.20"
+  },
+  "runtimeConfig": {}
+}

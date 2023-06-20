@@ -1,0 +1,3 @@
+table_catalog,table_schema,table_name,column_name,fs_entidad,fs_feature,flag_dep_temporal,flag_nulos,rank_variable,description
+rs-nprd-dlk-ia-dev-poc-55a3,train,per_fuga_amifullsalud_cls,estado_civil,persona,estado_civil,False,True,15,
+rs-nprd-dlk-ia-dev-poc-55a3,train,per_fuga_amifullsalud_cls,grado_instruccion,persona,grado_instruccion,False,True,8,

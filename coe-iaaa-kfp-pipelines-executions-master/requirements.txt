@@ -1,0 +1,16 @@
+kfp
+pyyaml
+kubernetes
+docstring_parser
+google-cloud-aiplatform
+google-cloud-bigquery
+pandas
+pandas-gbq
+scikit-learn
+fastparquet
+pyarrow
+fire
+lightgbm
+fsspec
+gcsfs
+aiutils@git+https://{GH_TOKEN}@github.com/Rimac-Seguros/ml-aiutils.git@release-2.0

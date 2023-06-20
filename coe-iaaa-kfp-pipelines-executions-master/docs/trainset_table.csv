@@ -1,0 +1,3 @@
+table_catalog,table_schema,table_name,tasa_target,tipo_persona,producto,cod_iniciativa,link_data_report,ds,mle,solucion_analitica,model_objective,package_name,description
+rs-nprd-dlk-ia-dev-poc-55a3,train,per_fuga_amifullsalud_cls,0.21,Persona,AMI - Full Salud,,gs://rs-nprd-dlk-ia-dev-poc-55a3-artfsto/ARTIFACTS/per_fuga_amifullsalud_cls/0.1.0/df.html,ypilah,rquirozr,my_package,binary,my_package,Modelo de Fuga de clientes AMI Full Salud
+rs-nprd-dlk-ia-dev-poc-55a3,train,per_fuga_amipreferencial_cls,0.17,Persona,AMI - Preferencial,,gs://rs-nprd-dlk-ia-dev-poc-55a3-artfsto/ARTIFACTS/per_fuga_amipreferencial_cls/0.1.0/df.html,ypilah,rquirozr,my_package,binary,my_package,Modelo de Fuga de clientes AMI Preferencial

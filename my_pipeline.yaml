@@ -1,0 +1,80 @@
+# PIPELINE DEFINITION
+# Name: my-pipeline
+# Inputs:
+#    recipient: str
+# Outputs:
+#    Output: int
+components:
+  comp-hello-func:
+    executorLabel: exec-hello-func
+    inputDefinitions:
+      parameters:
+        a:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: NUMBER_INTEGER
+deploymentSpec:
+  executors:
+    exec-hello-func:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - hello_func
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet     --no-warn-script-location 'numpy' 'pandas'\
+          \ 'kfp==2.0.0-rc.2' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          python3 -m kfp.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef hello_func(a: str) -> int:\n    import numpy as np\n    import\
+          \ pandas as pd\n    print(\"Leyendo un numpy\")\n    d = np.array([0,1])\n\
+          \    print(\"Leyendo un df\")\n    f = pd.DataFrame({\"col1\": [1,2,3],\
+          \ \"col2\": [2,3,4]})\n    print(len(a))\n    return len(a)\n\n"
+        image: python:3.7
+pipelineInfo:
+  name: my-pipeline
+root:
+  dag:
+    outputs:
+      parameters:
+        Output:
+          valueFromParameter:
+            outputParameterKey: Output
+            producerSubtask: hello-func
+    tasks:
+      hello-func:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-hello-func
+        inputs:
+          parameters:
+            a:
+              componentInputParameter: recipient
+        taskInfo:
+          name: hello-func
+  inputDefinitions:
+    parameters:
+      recipient:
+        parameterType: STRING
+  outputDefinitions:
+    parameters:
+      Output:
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.0.0-rc.2

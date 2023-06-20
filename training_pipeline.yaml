@@ -1,0 +1,162 @@
+# PIPELINE DEFINITION
+# Name: training-pipeline
+components:
+  comp-engineer-features:
+    executorLabel: exec-engineer-features
+    inputDefinitions:
+      artifacts:
+        prep_file:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+          description: the preprocessed file
+      parameters:
+        test_size:
+          defaultValue: 0.2
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        train_size:
+          defaultValue: 0.6
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        feat_test_file:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+          description: the features splitted by test
+        feat_train_file:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+          description: the features splitted by train
+        feat_valid_file:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+          description: the features splitted by valid
+  comp-preprocess:
+    executorLabel: exec-preprocess
+    inputDefinitions:
+      parameters:
+        raw_file:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        prep_file:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-engineer-features:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - engineer_features
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet     --no-warn-script-location 'kfp==2.0.0-rc.2'\
+          \ && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          python3 -m kfp.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef engineer_features(\n    prep_file: Input[Dataset],\n    feat_train_file:\
+          \ Output[Dataset],\n    feat_test_file: Output[Dataset],\n    feat_valid_file:\
+          \ Output[Dataset],\n    train_size: float=0.6,\n    test_size: float=0.2,\n\
+          ) -> None:\n    \"\"\"\n    Create dummy features\n\n    Args:\n       \
+          \ prep_file: the preprocessed file\n\n    Return:\n        feat_train_file:\
+          \ the features splitted by train\n        feat_test_file: the features splitted\
+          \ by test\n        feat_valid_file: the features splitted by valid\n   \
+          \ \"\"\"\n    import numpy as np\n    import pandas as pd\n\n    if train_size\
+          \ > 0 and train_size <= 0.6:\n        raise Exception(\"Invalid train size...\
+          \ should be less than 0.6 and greater than 0\") \n\n    df_prep = pd.read_csv(prep_file.path)\n\
+          \n    df_prep[\"cap_1_cap_2\"] = df_prep[\"cap_1\"] * df_prep[\"cap_2\"\
+          ]\n    df_prep[\"cap_4_cap_2\"] = df_prep[\"cap_4\"] * df_prep[\"cap_2\"\
+          ]\n    df_prep[\"cap_3_cap_1\"] = df_prep[\"cap_3\"] * df_prep[\"cap_1\"\
+          ]\n\n    train, test, valid = np.split(\n        df_prep.sample(frac=1),\
+          \ \n        [\n            int(train_size * len(df_prep)),\n           \
+          \ int((train_size + test_size) * len(df_prep)),\n        ]\n    )\n\n  \
+          \  train.to_csv(feat_train_file.path, index=False)\n    test.to_csv(feat_test_file.path,\
+          \ index=False)\n    valid.to_csv(feat_valid_file.path, index=False)\n\n"
+        image: index.docker.io/seyco/base_kbf_image
+    exec-preprocess:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - preprocess
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet     --no-warn-script-location 'kfp==2.0.0-rc.2'\
+          \ && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          python3 -m kfp.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef preprocess(\n    raw_file: str,\n    prep_file: Output[Dataset],\n\
+          ) -> None:\n    \"\"\"\n    Preprocess raw file\n\n    Args:\n        raw_file:\
+          \ the file that gathered all the raw data\n        prep_file: the output\
+          \ file that contains basic preprocessing\n        steps\n\n    Return:\n\
+          \        None\n    \"\"\"\n    import pandas as pd\n\n    df_input = pd.read_csv(raw_file)\n\
+          \    df_input[[\"country\", \"city\"]] = df_input[\"country_city\"].apply(lambda\
+          \ x: x.split(\",\"))\n    df_input.to_csv(prep_file.path, index=False)\n\
+          \n"
+        image: index.docker.io/seyco/base_kbf_image
+pipelineInfo:
+  name: training-pipeline
+root:
+  dag:
+    tasks:
+      engineer-features:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-engineer-features
+        dependentTasks:
+        - preprocess
+        inputs:
+          artifacts:
+            prep_file:
+              taskOutputArtifact:
+                outputArtifactKey: prep_file
+                producerTask: preprocess
+        taskInfo:
+          name: engineer-features
+      preprocess:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-preprocess
+        inputs:
+          parameters:
+            raw_file:
+              runtimeValue:
+                constant: people.csv
+        taskInfo:
+          name: preprocess
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.0.0-rc.2
